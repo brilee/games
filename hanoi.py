@@ -20,7 +20,7 @@ class HanoiPuzzle():
         self.size = PUZZLE_SIZE
         if randomize:
             import random
-            stack_allocation = ''.join(random.choice('012') for i in range(PUZZLE_SIZE))
+            stack_allocation = (random.choice('012') for i in range(PUZZLE_SIZE))
             self.stacks = [[], [], []]
             for i, index in enumerate(stack_allocation):
                 self.stacks[int(index)].append(PUZZLE_SIZE - i)
@@ -43,6 +43,7 @@ class HanoiPuzzle():
         for s in self.stacks:
             assert sorted(s, reverse=True) == s
         assert sum(map(len, self.stacks)) == self.size
+        return True
 
     def move(self, index1, index2, verbose=False):
         '''
@@ -87,9 +88,7 @@ class HanoiPuzzle():
             self.move_n(n-1, 3-index1-index2, index2, **kwargs)
 
     def solve_basic_hanoi(self, **kwargs):
-        '''
-        Just for demonstration purposes.
-        '''
+        'Just for demonstration purposes.'
         self.move_n(self.size, 0, 1, **kwargs)       
 
     def solve(self, **kwargs):

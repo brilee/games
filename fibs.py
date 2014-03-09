@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import random
 from collections import Counter
 
@@ -7,9 +9,7 @@ from collections import Counter
 # Written by Brian Lee
 
 def fibonacci_gen(n):
-    '''
-    Generates fibonacci numbers, starting with 1, 2
-    '''
+    'Generates fibonacci numbers, starting with 1, 2'
     result = []
     a, b = 1, 2
     for i in range(n):
@@ -27,7 +27,6 @@ EMPTY_BOARD = tuple((EMPTY,)*BOARD_SIZE for i in range(BOARD_SIZE))
 FIBS = fibonacci_gen(3 * BOARD_SIZE**2)
 # scoring at the end: F_n yields 2**n points.
 SCORES = {fib : 2**i for i, fib in enumerate(FIBS)}
-SCORES.update({EMPTY: 0})
 # special case for combining 1 + 1 = 2
 COMBOS = {(1,1) : 2}
 # normal case: F_{n-2} + F_{n-1} = F_n
@@ -59,31 +58,30 @@ def leftshift(row):
             break
     return tuple(new_row)
 
-assert leftshift((1,3,5,5)) == (1,8,5,EMPTY)
+assert leftshift((1,3,5,8)) == (1,8,8,EMPTY)
 assert leftshift((1,3,8,21)) == (1,3,8,21)
 assert leftshift((EMPTY,1,1,2)) == (1,1,2,EMPTY)
 assert leftshift((1,EMPTY, 1,2)) == (1,1,2,EMPTY)
 assert leftshift((1,3,8,EMPTY)) == (1,3,8,EMPTY) 
 
-def check_loss(board):
-    '''
-    Checks if the board is a lost position. 
-    A board is lost when no more moves can be made.
-    '''
-    # When a board is empty, it gives a false positive for "move made"
-    if board == EMPTY_BOARD:
-        return False
-    return all(move(board, EMPTY) == board for move in move_dispatch.values())
-
 def new_board():
+    'Returns an empty board. Customize the starting board here.'
     return tuple((EMPTY,)*BOARD_SIZE for i in range(BOARD_SIZE))
 
 def board_iter(board):
+    'Iterates over nonempty elements of the board'
     for row in board:
         for item in row:
             if item is not EMPTY:
                 yield item
 
+def power_rand(p, lower, upper): 
+    '''
+    Power law distributed random numbers, flipped so that early numbers are
+    more frequent.
+    http://mathworld.wolfram.com/RandomNumber.html
+    '''
+    return ((upper**(p+1) - lower**(p+1)) * random.random() + lower**(p+1)) ** (1/(p+1))
 
 def get_new_fib(board):
     '''
@@ -96,8 +94,17 @@ def get_new_fib(board):
     else:
         highest_number = max(board_iter(board))
         index = FIBS.index(highest_number)
-    max_index = max(2, index - 2)
-    return FIBS[random.randint(0, max_index)]
+    # The largest fibonacci F_index that we are going to produce.
+    max_index = max(2, index - 2) 
+
+    # Use a power law to weight the random tiles towards the smaller numbers.
+    # The likelyhood of the tile F_n is proportional to n^p.
+    p = -1.5
+    # offset by 1 and subtract later because power laws blow up at 0.
+    lower = 1
+    upper = max_index + 2
+
+    return FIBS[int(power_rand(p, lower, upper)) - 1]
 
 def move_left(board, next_piece):
     '''
@@ -105,8 +112,8 @@ def move_left(board, next_piece):
     If no shift is possible, return the board unchanged.
     '''
     moved_board = [leftshift(row) for row in board]
-    if moved_board == board:
-        return moved_board
+    if tuple(moved_board) == board and board != EMPTY_BOARD:
+        return board
     else:
         for i in range(BOARD_SIZE):
             if moved_board[i][-1] == EMPTY:
@@ -128,6 +135,16 @@ move_dispatch = {'w': move_up,
                  'd': move_right,
                  's': move_down}
 
+def check_loss(board):
+    '''
+    Checks if the board is a lost position. 
+    A board is lost when no more moves can be made.
+    '''
+    # When a board is empty, it gives a false positive for "move made"
+    if board == EMPTY_BOARD:
+        return False
+    return all(move(board, EMPTY) == board for move in move_dispatch.values())
+
 def print_board(board):
     if board == EMPTY_BOARD:
         width = 1
@@ -137,7 +154,7 @@ def print_board(board):
     cell_template = '{!s:>' + str(width) + 's}'
     row_separator = ('-'*width).join(['\n'] + ['.']*(len(board)-1) + ['\n'])
     rows = row_separator.join('|'.join(cell_template.format(c) for c in row) for row in board)
-    print rows
+    print(rows)
 
 def score_board(board):
     return sum(SCORES[num] for num in board_iter(board))
@@ -145,31 +162,30 @@ def score_board(board):
 def score_breakdown(board):
     counts = Counter(board_iter(board))
     row_template = ' | '.join('{:^6s}' for i in range(4))
-    print row_template.format('Tile', 'Number', 'Value', 'Score')
+    print(row_template.format('Tile', 'Number', 'Value', 'Score'))
     for tile in sorted(counts):
-        print row_template.format(
+        print(row_template.format(
                     str(tile), 
                     str(counts[tile]), 
                     str(SCORES[tile]), 
                     str(counts[tile] * SCORES[tile])
-                    )
-    print row_template.format('', '', 'Total:', str(score_board(board)))
+                    ))
+    print(row_template.format('', '', 'Total:', str(score_board(board))))
 
 if __name__ == "__main__":
     board = new_board()
     while True:
-        print 
         print_board(board)
-        print "Score: %s" % score_board(board)
+        print("Score: %s" % score_board(board))
         next_piece = get_new_fib(board)
-        print "Upcoming tile: %s" % next_piece
+        print("Upcoming tile: %s" % next_piece)
 
         move = ''
         while move not in move_dispatch:
             move = raw_input('make a move (wasd)')
         board = move_dispatch[move](board, next_piece)
         if check_loss(board):
-            print "No more moves available! You lose."
+            print("No more moves available! You lose.")
             score_breakdown(board)
             break
 

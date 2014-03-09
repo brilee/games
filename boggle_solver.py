@@ -2,7 +2,7 @@ from string import ascii_lowercase as letters
 import random
 
 with open('/usr/share/dict/words') as f:
-    dictionary = set(line.strip().upper() for line in f.readlines())
+    DICTIONARY = set(line.strip().upper() for line in f.readlines())
 
 def display(board):
     print 'Board is:'
@@ -51,7 +51,7 @@ def search(board, length, **kwargs):
         paths = [p for p in paths if len(set(p)) == len(p)]
 
     words = [translate(path, board) for path in paths]
-    valid_words = filter(lambda word: word in dictionary, words)
+    valid_words = filter(lambda word: word in DICTIONARY, words)
 
     # Only print unique hits
     return set(valid_words)

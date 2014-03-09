@@ -1,6 +1,7 @@
-with open('/usr/share/dict/twl06') as f:
-    _TWL06_WORDS = [line.strip().upper() for line in f.readlines()]
-    TWL06 = set(_TWL06_WORDS)
+# Solves a word search puzzle with build-in word dictionary.
+
+with open('/usr/share/dict/words') as f:
+    WORDS = set(line.strip().upper() for line in f.readlines())
 
 def flip_horizontal(puzzle):
     return [row[::-1] for row in puzzle]
@@ -87,9 +88,8 @@ def generate_up_right_diagonals(puzzle, min_length):
 def generate_up_left_diagonals(puzzle, min_length):
     return generate_down_right_diagonals(rotate_180(puzzle), min_length)
 
-
 def is_valid_word(word):
-    return word in TWL06
+    return word in WORDS
 
 def solve_crossword(puzzle, diagonals=True, reverse=True, min_length=4):
     answers = []
