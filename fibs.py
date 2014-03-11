@@ -150,6 +150,9 @@ def print_board(board):
     else:
         width = max(len(str(piece)) for piece in board_iter(board))
 
+    # !s means convert to string before printing
+    # > means right-aligned
+    # :4s means 4-char fixed-width
     cell_template = '{!s:>' + str(width) + 's}'
     row_separator = ('-'*width).join(['\n'] + ['.']*(len(board)-1) + ['\n'])
     rows = row_separator.join('|'.join(cell_template.format(c) for c in row) for row in board)
@@ -211,7 +214,8 @@ class _GetchWindows:
 
 getch = _Getch()
 
-if __name__ == "__main__":
+def play_game():
+    ' Plays a game of Fibs. Returns False if the user quit.'
     board = new_board()
     while True:
         print_board(board)
@@ -226,9 +230,24 @@ if __name__ == "__main__":
                        and is_valid(move, board))):
              move = getch()
         if move == 'q':
-            break
+            return False
         board = move_dispatch[move](board, next_piece)
         if check_loss(board):
             print("No more moves available! You lose.")
             print_score_breakdown(board)
+            return True
+
+if __name__ == "__main__":
+    while True:
+        success = play_game()
+        if success:
+            print("Play again? y/n")
+            play_again = '?'
+            while play_again not in 'yn':
+                play_again = getch()
+            if play_again == 'y':
+                continue
+            else:
+                break
+        else:
             break
