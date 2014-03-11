@@ -42,7 +42,7 @@ assert rotateCW(rotateCW(rotateCW(rotateCW(testboard)))) == testboard
 
 def leftshift(row):
     '''
-    Takes a tuple (1,3,5,5) and returns its left-shift: (1,8,5,EMPTY)
+    Takes a tuple (1,3,5,8) and returns its left-shift: (1,8,8,EMPTY)
     If no shift is possible, return tuple unchanged.
     '''
     new_row = list(row)
@@ -65,15 +65,12 @@ assert leftshift((1,EMPTY, 1,2)) == (1,1,2,EMPTY)
 assert leftshift((1,3,8,EMPTY)) == (1,3,8,EMPTY) 
 
 def new_board():
-    'Returns an empty board. Customize the starting board here.'
-    return tuple((EMPTY,)*BOARD_SIZE for i in range(BOARD_SIZE))
+    'Customize the starting board here.'
+    return EMPTY_BOARD
 
 def board_iter(board):
     'Iterates over nonempty elements of the board'
-    for row in board:
-        for item in row:
-            if item is not EMPTY:
-                yield item
+    return (item for row in board for item in row if item != EMPTY)
 
 def power_rand(p, lower, upper): 
     '''
@@ -102,6 +99,7 @@ def get_new_fib(board):
     p = -1.5
     # offset by 1 and subtract later because power laws blow up at 0.
     lower = 1
+    # we want an upper-inclusive range, so add another 1.
     upper = max_index + 2
 
     return FIBS[int(power_rand(p, lower, upper)) - 1]
@@ -135,15 +133,16 @@ move_dispatch = {'w': move_up,
                  'd': move_right,
                  's': move_down}
 
+def is_valid(move, board):
+    # When a board is empty, it gives a false positive for "move made"
+    return board == EMPTY_BOARD or move_dispatch[move](board, EMPTY) != board
+
 def check_loss(board):
     '''
     Checks if the board is a lost position. 
     A board is lost when no more moves can be made.
     '''
-    # When a board is empty, it gives a false positive for "move made"
-    if board == EMPTY_BOARD:
-        return False
-    return all(move(board, EMPTY) == board for move in move_dispatch.values())
+    return not any(is_valid(move, board) for move in move_dispatch)
 
 def print_board(board):
     if board == EMPTY_BOARD:
@@ -159,7 +158,7 @@ def print_board(board):
 def score_board(board):
     return sum(SCORES[num] for num in board_iter(board))
 
-def score_breakdown(board):
+def print_score_breakdown(board):
     counts = Counter(board_iter(board))
     row_template = ' | '.join('{:^6s}' for i in range(4))
     print(row_template.format('Tile', 'Number', 'Value', 'Score'))
@@ -172,6 +171,46 @@ def score_breakdown(board):
                     ))
     print(row_template.format('', '', 'Total:', str(score_board(board))))
 
+
+# http://code.activestate.com/recipes/134892/
+class _Getch:
+    """Gets a single character from standard input.  Does not echo to the
+screen."""
+    def __init__(self):
+        try:
+            self.impl = _GetchWindows()
+        except ImportError:
+            self.impl = _GetchUnix()
+
+    def __call__(self): return self.impl()
+
+
+class _GetchUnix:
+    def __init__(self):
+        import tty, sys
+
+    def __call__(self):
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+
+class _GetchWindows:
+    def __init__(self):
+        import msvcrt
+
+    def __call__(self):
+        import msvcrt
+        return msvcrt.getch()
+
+getch = _Getch()
+
 if __name__ == "__main__":
     board = new_board()
     while True:
@@ -179,14 +218,17 @@ if __name__ == "__main__":
         print("Score: %s" % score_board(board))
         next_piece = get_new_fib(board)
         print("Upcoming tile: %s" % next_piece)
+        print('make a move (wasd / q to quit)')
 
-        move = ''
-        while move not in move_dispatch:
-            move = raw_input('make a move (wasd)')
+        move = '?'
+        while not (move == 'q'
+                   or (move in 'wasd'
+                       and is_valid(move, board))):
+             move = getch()
+        if move == 'q':
+            break
         board = move_dispatch[move](board, next_piece)
         if check_loss(board):
             print("No more moves available! You lose.")
-            score_breakdown(board)
+            print_score_breakdown(board)
             break
-
-
