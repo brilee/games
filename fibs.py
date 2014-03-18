@@ -238,6 +238,7 @@ def play_game():
             return True
 
 if __name__ == "__main__":
+    print("Welcome to Fibs! To play: 'squash' two adjacent Fibonacci numbers together to make the next one!")
     while True:
         success = play_game()
         if success:
